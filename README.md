@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/28422172/README.md)
 # PINROUTE - 스마트 여행 플래너
 
 PINROUTE는 복잡한 여행 계획을 AI가 대신 설계해주는 모바일 최적화 웹 애플리케이션입니다.

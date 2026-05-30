@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <!-- 모바일 환경에서 핀치 줌을 방지하고 완벽한 네이티브 모바일 앱 경험을 주기 위해 뷰포트 고정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PINROUTE - AI 스마트 여행 플래너</title>
+  
+  <!-- 프리미엄 스타일시트 링크 -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- SEO 메타 태그 -->
+  <meta name="description" content="복잡한 여행 계획을 AI가 대신 설계해주는 스마트 여행 플래너, PINROUTE 모바일 앱 초기 빌드.">
+  <meta name="keywords" content="PINROUTE, 핀루트, 여행 플래너, AI 여행, 여행 코스 추천, 일정 편집, 카카오 지도">
+</head>
+<body>
+
+  <!-- 데스크탑 뷰에서 스마트폰 목업 프레임을 그려주는 3D Phone Shell 컨테이너 -->
+  <div class="phone-container" id="pinroute-phone-shell">
+    <div class="phone-screen">
+      
+      <!-- [A] APP TOP HEADER (공통 헤더, 특정 풀스크린 뷰에서는 app.js가 숨김) -->
+      <header class="app-header">
+        <div class="logo-text" id="header-logo-container">
+          PINROUTE<span class="dot"></span>
+        </div>
+        <h1 class="header-title" id="header-title" style="display:none;">홈</h1>
+        <button class="header-action-btn" id="header-info-btn" title="정보">ℹ️</button>
+      </header>
+
+      <!-- [B] APP MAIN CONTENT VIEWS CONTAINER -->
+      <main class="app-content">
+
+        <!-- 1. LOGIN / SIGNUP VIEW (#login-view) -->
+        <div class="fullscreen-view active" id="login-view">
+          <div class="login-logo-container">
+            <div class="login-logo-img">📌</div>
+            <h2 class="login-logo-text">PINROUTE</h2>
+            <p class="login-logo-desc">스마트 AI 여행 동선 매니저</p>
+          </div>
+          
+          <div class="login-form">
+            <div class="input-group">
+              <input type="text" id="login-username" class="input-field" placeholder="이메일 아이디 입력">
+              <span class="input-icon">👤</span>
+            </div>
+            <div class="input-group">
+              <input type="password" id="login-password" class="input-field" placeholder="비밀번호 입력">
+              <span class="input-icon">🔒</span>
+            </div>
+            
+            <div class="login-actions">
+              <a href="#find-id" onclick="Components.showToast('아이디 찾기 데모입니다.')">아이디 찾기</a>
+              <a href="#find-pw" onclick="Components.showToast('비밀번호 찾기 데모입니다.')">비밀번호 찾기</a>
+            </div>
+          </div>
+
+          <button id="login-submit-btn" class="primary-btn" style="margin-bottom: 24px;">로그인</button>
+
+          <div class="social-login-title">
+            <span>SNS 간편 로그인</span>
+          </div>
+
+          <div class="social-buttons">
+            <button class="social-btn google" title="구글 로그인">G</button>
+            <button class="social-btn kakao" title="카카오 로그인">K</button>
+            <button class="social-btn naver" title="네이버 로그인">N</button>
+          </div>
+
+          <button id="login-guest-btn" class="guest-btn">비회원으로 시작하기</button>
+        </div>
+
+        <!-- 2. ONBOARDING VIEW (#onboarding-view) -->
+        <div class="fullscreen-view" id="onboarding-view">
+          <div class="onboarding-progress-bar">
+            <div class="onboarding-progress-fill"></div>
+          </div>
+          
+          <div class="onboarding-question-box">
+            
+            <!-- STEP 1: 목적지 기정 여부 -->
+            <div class="onboarding-step active" id="onb-step-1">
+              <h3 class="onboarding-question">떠나실 목적지를<br>미리 정하셨나요?</h3>
+              <p class="onboarding-desc">목적지가 있으면 해당 지역 위주로 일정을 설계하고, 없으면 취향을 분석해 여행지를 제안해 드릴게요.</p>
+              
+              <div class="btn-grid">
+                <button class="select-btn" id="onb-dest-yes">
+                  <span class="btn-icon">🗺️</span>
+                  <span class="btn-label">네, 정했어요</span>
+                </button>
+                <button class="select-btn" id="onb-dest-no">
+                  <span class="btn-icon">🧭</span>
+                  <span class="btn-label">아직요, 추천해줘요</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- STEP 2: 목적지 입력 또는 취향 태그 다중 선택 -->
+            <div class="onboarding-step" id="onb-step-2">
+              
+              <!-- STEP 2-A: 목적지 입력 플로우 -->
+              <div id="onb-dest-selector-flow" style="display:none; width:100%;">
+                <h3 class="onboarding-question">목적지는 어디인가요?</h3>
+                <p class="onboarding-desc">원하시는 도시나 지역명을 입력해 주시거나 아래의 핫한 추천 지역을 콕 눌러주세요.</p>
+                
+                <div class="destination-input-container">
+                  <input type="text" id="onb-dest-input" class="dest-input" placeholder="예: 제주, 강릉, 부산, 서울, 경주">
+                </div>
+                
+                <div style="font-size: 13px; font-weight:700; color:var(--dark); margin-bottom:10px;">🌟 인기 여행지 퀵클릭</div>
+                <div class="dest-suggestions">
+                  <span class="suggestion-chip" data-val="제주">제주도 🍊</span>
+                  <span class="suggestion-chip" data-val="강릉">강릉 🌲</span>
+                  <span class="suggestion-chip" data-val="부산">부산 🌊</span>
+                  <span class="suggestion-chip" data-val="경주">경주 🌸</span>
+                  <span class="suggestion-chip" data-val="서울">서울 🗼</span>
+                </div>
+              </div>
+
+              <!-- STEP 2-B: 여행 취향 태그 선택 플로우 (다중선택) -->
+              <div id="onb-tags-selector-flow" style="display:none; width:100%;">
+                <h3 class="onboarding-question">어떤 스타일의 여행을<br>가장 좋아하시나요?</h3>
+                <p class="onboarding-desc">당신의 감성을 자극하는 키워드를 복수 선택해주세요. AI 플래너가 맞춤 대화에 적극 반영합니다.</p>
+                
+                <div class="tags-container">
+                  <div class="tag-chip" data-val="힐링">🌱 힐링</div>
+                  <div class="tag-chip" data-val="관광">📸 관광</div>
+                  <div class="tag-chip" data-val="맛집">🍣 맛집</div>
+                  <div class="tag-chip" data-val="액티비티">🪂 액티비티</div>
+                  <div class="tag-chip" data-val="자연">⛰️ 자연</div>
+                  <div class="tag-chip" data-val="쇼핑">🛍️ 쇼핑</div>
+                  <div class="tag-chip" data-val="문화">🏛️ 문화</div>
+                  <div class="tag-chip" data-val="가족여행">👨‍👩‍👧 가족여행</div>
+                  <div class="tag-chip" data-val="커플여행">👩‍❤️‍👨 커플여행</div>
+                  <div class="tag-chip" id="tag-other-trigger" style="border-style: dashed; border-color: var(--primary);">✏️ 기타 직접입력</div>
+                </div>
+
+                <!-- 수동 기타 추가 폼 -->
+                <div class="other-input-container" style="display:none;">
+                  <input type="text" id="other-tag-input" class="other-input" placeholder="키워드 입력 (예: 반려동물, 혼행)">
+                  <button id="other-tag-add-btn" class="other-add-btn">등록</button>
+                </div>
+              </div>
+
+              <!-- 하단 탐색 제어 -->
+              <div class="onboarding-nav" style="margin-top: 32px;">
+                <button class="onboarding-back-btn" id="onb-back-btn">이전으로</button>
+                <button class="primary-btn" id="onb-finish-btn" style="flex:1;">AI 플래너 대화 시작</button>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 3. HOME VIEW (#home-view) -->
+        <div class="view" id="home-view">
+          <div class="search-container">
+            <input type="text" class="search-bar" placeholder="어디로 떠나시나요?" id="home-search-input">
+            <span class="search-icon">🔍</span>
+          </div>
+
+          <!-- 생성한 여행 계획 -->
+          <section class="home-section">
+            <div class="section-header">
+              <h3 class="section-title">나의 저장된 여행 계획</h3>
+              <span class="section-more" onclick="window.location.hash='#mypage'">전체보기</span>
+            </div>
+            
+            <!-- 사용자가 직접 저장한 계획 카드들만 렌더링 -->
+            <div id="home-saved-plans-container" class="card-list">
+              <!-- JS 동적 주입 -->
+            </div>
+          </section>
+
+          <!-- AI 추천 여행 코너 -->
+          <section class="home-section" style="margin-bottom: 40px;">
+            <div class="section-header">
+              <h3 class="section-title">취향 조각 기반 AI 추천 여행</h3>
+            </div>
+            
+            <!-- 추천 카드 목록 -->
+            <div id="home-ai-recommends-list" class="card-list">
+              <!-- JS 동적 주입 -->
+            </div>
+          </section>
+        </div>
+
+        <!-- 4. AI CHAT VIEW (#chat-view) -->
+        <div class="view" id="chat-view">
+          <div class="chat-container">
+            
+            <!-- 상단 분석 게이지 -->
+            <div class="chat-gauge-bar">
+              <div class="chat-gauge-fill" id="chat-gauge-fill"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 4px; font-size:11px; font-weight:600; color:var(--medium-gray);">
+              <span>🎯 취향 분석 스캔도</span>
+              <span id="chat-gauge-num">10%</span>
+            </div>
+
+            <!-- 대화 메시지 로그 -->
+            <div class="chat-messages" id="chat-messages-container">
+              <!-- JS 버블 동적 인젝션 -->
+            </div>
+
+            <!-- 하단 입력창 -->
+            <div class="chat-input-row">
+              <input type="text" class="chat-input" id="chat-user-input" placeholder="답변을 입력해 주세요...">
+              <button class="chat-send-btn" id="chat-send-btn" title="전송">✈️</button>
+            </div>
+
+            <!-- 특정 게이지 이상일 때 튀어나오는 다이내믹 플로팅 동선 생성기 버튼 -->
+            <button class="floating-gen-btn" id="floating-gen-btn">
+              ✨ 최적 여행 동선 만들기
+            </button>
+          </div>
+        </div>
+
+        <!-- 5. ANALYSIS REPORT VIEW (#analysis-view) - FULL SCREEN REPORT -->
+        <div class="fullscreen-view" id="analysis-view">
+          <div style="padding: 24px 20px 40px;">
+            
+            <!-- 프로필 아바타 및 도출된 페르소나 리포트 -->
+            <div class="analysis-header">
+              <span class="persona-badge" id="report-persona-badge">효자가 되고 싶은 여행가</span>
+              <h2 class="persona-title" id="report-persona-title">"효자가 되고 싶은 세심한 설계자"</h2>
+              <p style="font-size:13px; line-height:1.5; color:var(--medium-gray); margin-top:8px;" id="report-persona-desc">
+                동행하는 부모님의 동선과 식도를 배려해 쉼표를 그리는 여행자입니다.
+              </p>
+            </div>
+
+            <!-- 취향 태그 관리 섹션 (사용자가 X를 눌러 삭제 보완 가능) -->
+            <div class="tag-editor-section">
+              <h4 class="tag-editor-title">🏷️ AI가 추출한 당신의 여행 키워드 (삭제 가능)</h4>
+              <div class="editable-tags" id="analysis-tags-layer">
+                <!-- 태그 칩 동적 주입 -->
+              </div>
+              
+              <!-- 분석 보완 2차 질문 실행 트리거 -->
+              <div class="supplement-btn-row">
+                <button class="supplement-btn" id="report-supplement-btn">🔍 분석 보완 (추가 질문)</button>
+              </div>
+            </div>
+
+            <!-- 3대 대안 제안 카드 영역 -->
+            <div class="options-section">
+              <h3 class="options-title">🗺️ AI 추천 3대 시나리오 코스</h3>
+              
+              <div id="plans-options-container">
+                <!-- 3개 안 카드가 렌더링됨 -->
+              </div>
+            </div>
+
+            <!-- 최종 확정 지도 보기 버튼 -->
+            <button class="primary-btn" id="report-confirm-plan-btn" style="margin-top: 32px; height: 56px; font-size:16px;">
+              🗺️ 선택한 안 지도로 동선 확인하기
+            </button>
+          </div>
+        </div>
+
+        <!-- 6. MAP VIEW (#map-view) - MAP & TIMELINE EDITOR -->
+        <div class="view" id="map-view" style="padding:0;">
+          <div class="map-view-container">
+            
+            <!-- 지도가 로딩되는 백그라운드 레이어 (카카오 맵 또는 모크 맵 탑재) -->
+            <div id="map-container-layer" class="map-element">
+              <!-- JS 로더 주입 -->
+            </div>
+
+            <!-- 지도 위 플로팅 정밀 제어 버튼 -->
+            <div class="map-floating-header">
+              <button class="map-control-btn primary" id="map-ctrl-save">💾 계획 저장</button>
+              <button class="map-control-btn" id="map-ctrl-export">📥 파일 내보내기</button>
+              <button class="map-control-btn" onclick="Components.showToast('핀 고정 모드가 켜졌습니다. 지도 위 장소를 눌러 추가하세요!')">📌 핀 고정</button>
+            </div>
+
+            <!-- 지도의 우측 플로팅 줌 컨트롤러 -->
+            <div class="map-zoom-controls">
+              <button class="zoom-btn" id="map-zoom-in" title="확대">＋</button>
+              <button class="zoom-btn" id="map-zoom-out" title="축소">－</button>
+            </div>
+
+            <!-- 하단 시트 (Bottom Sheet) 리스트 뷰 및 편집기 -->
+            <div class="bottom-sheet">
+              <div class="sheet-handle">
+                <div class="sheet-handle-bar"></div>
+              </div>
+              <div class="sheet-content">
+                <div class="sheet-title-row">
+                  <div>
+                    <h3 class="sheet-title">일정 타임라인 및 코스 조율</h3>
+                    <span class="sheet-subtitle" id="sheet-spots-count">총 장소 5곳</span>
+                  </div>
+                  <span style="font-size:11px; font-weight:700; color:var(--primary); cursor:pointer;" onclick="Components.showToast('순서는 ▲▼로 변경, X로 제외가 가능합니다.')">도움말</span>
+                </div>
+                
+                <!-- 타임라인 아이템 리스트업 -->
+                <div class="timeline-list" id="timeline-list-container">
+                  <!-- JS 동적 렌더링 -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 7. COMMUNITY VIEW (#community-view) -->
+        <div class="view" id="community-view">
+          
+          <!-- 커뮤니티 정밀 서브 탭바 -->
+          <div class="community-tabs">
+            <div class="comm-tab active">BEST 실시간 인기</div>
+            <div class="comm-tab">추천 일정 피드</div>
+            <div class="comm-tab">계획 공유 라운지</div>
+          </div>
+
+          <!-- 포스트 카드 피드 -->
+          <div class="card-list" id="community-posts-container" style="margin-bottom: 40px;">
+            <!-- JS 소셜 포스트 인젝션 -->
+          </div>
+        </div>
+
+        <!-- 8. MYPAGE VIEW (#mypage-view) -->
+        <div class="view" id="mypage-view">
+          
+          <!-- 마이페이지 프로필 아바타 대화상자 -->
+          <div class="mypage-profile-section" title="클릭하여 프로필 이름을 변경하세요">
+            <div class="mypage-avatar" id="mypage-avatar-view">👤
+              <div class="avatar-edit-overlay">✏️</div>
+            </div>
+            <h3 class="mypage-name" id="my-profile-name">길동이 여행자</h3>
+            <span class="mypage-badge" id="my-premium-badge">AI FREE 등급</span>
+          </div>
+
+          <!-- 설정 메뉴 목록 -->
+          <div class="mypage-menu" style="margin-bottom: 40px;">
+            <div class="menu-item" onclick="Components.showToast('여행 취향은 AI 채팅에서 실시간 학습 및 반영 중입니다.')">
+              <div class="menu-item-left">
+                <span class="menu-item-icon">⚙️</span>
+                <span>내 정보 / 여행 취향 수정</span>
+              </div>
+              <span class="menu-item-right">&gt;</span>
+            </div>
+            
+            <div class="menu-item" onclick="Components.showToast('선호 지역 설정 변경 모킹.')">
+              <div class="menu-item-left">
+                <span class="menu-item-icon">📍</span>
+                <span>선호 여행 지역 수정</span>
+              </div>
+              <span class="menu-item-right">제주도 &gt;</span>
+            </div>
+            
+            <!-- 토글 스위치 1: 다크 모드 (완전 구현) -->
+            <div class="menu-item">
+              <div class="menu-item-left">
+                <span class="menu-item-icon">🌙</span>
+                <span>다크 모드 테마 변경</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="switch-darkmode">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- 토글 스위치 2: 초정밀 프리미엄 AI 구독 활성화 -->
+            <div class="menu-item">
+              <div class="menu-item-left">
+                <span class="menu-item-icon">👑</span>
+                <span>AI 프리미엄 플랜 구독</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="switch-premium">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- 토글 스위치 3: 푸시 알림 수신 동의 -->
+            <div class="menu-item">
+              <div class="menu-item-left">
+                <span class="menu-item-icon">🔔</span>
+                <span>스마트 알림 수신 동의</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="switch-noti" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="menu-item" onclick="Components.showToast('PINROUTE 버전 1.0.4 - 최신 빌드입니다.')">
+              <div class="menu-item-left">
+                <span class="menu-item-icon">ℹ️</span>
+                <span>어플리케이션 버전 정보</span>
+              </div>
+              <span class="menu-item-right" style="color:var(--primary); font-weight:700;">1.0.4</span>
+            </div>
+          </div>
+        </div>
+
+      </main>
+
+      <!-- [C] APP BOTTOM TABBAR -->
+      <nav class="app-tabbar">
+        <a href="#home" class="tabbar-item active">
+          <span class="tab-icon">🏠</span>
+          <span>홈</span>
+        </a>
+        <a href="#chat" class="tabbar-item">
+          <span class="tab-icon">💬</span>
+          <span>AI 채팅</span>
+        </a>
+        <a href="#map" class="tabbar-item">
+          <span class="tab-icon">🗺️</span>
+          <span>지도</span>
+        </a>
+        <a href="#community" class="tabbar-item">
+          <span class="tab-icon">👥</span>
+          <span>커뮤니티</span>
+        </a>
+        <a href="#mypage" class="tabbar-item">
+          <span class="tab-icon">👤</span>
+          <span>마이페이지</span>
+        </a>
+      </nav>
+
+    </div>
+  </div>
+
+  <!-- [D] MODAL POPUPS & INTERACTIVE SLIDE SHEETS -->
+  
+  <!-- 1. 장소 상세 조회 및 "경로 추가" 핀 고정 모달 -->
+  <div class="modal-overlay" id="spot-detail-overlay">
+    <div class="detail-modal">
+      <div class="modal-img">
+        <span id="modal-thum-emoji">🍣</span>
+        <button class="modal-close-btn" title="닫기">&times;</button>
+      </div>
+      
+      <div class="modal-title-row">
+        <h3 class="modal-title" id="modal-spot-name">돌담 식당</h3>
+        <div class="modal-meta">
+          <span style="color:var(--primary); font-weight:700;">★ <span id="modal-rating">4.8</span></span>
+          <span id="modal-reviews-count">후기 18개</span>
+        </div>
+      </div>
+
+      <div class="modal-desc-box">
+        <p id="modal-desc">가상의 설명 텍스트입니다. 이 곳은 정말 기분 좋은 바람과 자연의 고요함이 가득 담긴 장소입니다.</p>
+      </div>
+
+      <div class="modal-desc-box modal-ai-reason" style="background-color: var(--primary-soft); border-color: var(--primary);">
+        <strong style="display:block; font-size:11px; text-transform:uppercase; color:var(--primary); margin-bottom:4px;">💡 AI 추천 이유</strong>
+        <p id="modal-ai-reason-text" style="font-size:12.5px; color:var(--dark-gray);">사용자의 취향 태그 분석에 따른 초정밀 추천 매칭 장소입니다.</p>
+      </div>
+
+      <div class="modal-details">
+        <div class="modal-detail-item">
+          <strong>🕰️ 운영시간</strong>
+          <span id="modal-hours">09:00 - 21:00</span>
+        </div>
+        <div class="modal-detail-item">
+          <strong>📍 상세주소</strong>
+          <span id="modal-address">제주 서귀포시 안덕면 돌담길 12</span>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <!-- 예약/티켓구매 등 외부 연동 모크 버튼 -->
+        <button class="modal-external-link-btn" id="modal-external-btn">🔗 예약 연동 바로가기</button>
+        <!-- 핀 고정 및 내 경로에 동적 추가 버튼 -->
+        <button class="primary-btn" id="modal-pin-lock-btn" style="background-color:var(--primary); color:white;">📌 핀 고정 및 내 경로에 추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 내보내기 다운로드 / 공유 포맷 선택 모달 -->
+  <div class="modal-overlay" id="export-modal-overlay">
+    <div class="detail-modal" style="padding: 24px 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h4 style="font-size: 16px; font-weight: 800; color:var(--dark);">📥 여행 계획 파일 내보내기</h4>
+        <button class="modal-close-btn" style="position:static;" onclick="document.getElementById('export-modal-overlay').classList.remove('active')">&times;</button>
+      </div>
+      <p style="font-size: 12.5px; color: var(--medium-gray); margin-bottom: 20px; line-height: 1.4;">
+        생성 및 조율된 최적의 여행 경로를 원하는 포맷의 파일로 빌드하여 즉각 내려받거나 내보냅니다.
+      </p>
+
+      <div class="export-options-list">
+        <!-- 엑셀/구글시트 CSV 파일 다운로드 -->
+        <button class="export-option-btn" data-format="csv">
+          <span>📊 Google Sheets 형식 표 파일 (.csv)</span>
+          <span class="badge">다운로드</span>
+        </button>
+        <!-- 타임라인 시간표 뷰 모달 -->
+        <button class="export-option-btn" data-format="timetable">
+          <span>📅 스케줄 타임테이블 뷰어</span>
+          <span class="badge">보기</span>
+        </button>
+        <!-- 일반 텍스트 목록형 클립보드 복사 -->
+        <button class="export-option-btn" data-format="list">
+          <span>📋 텍스트 목록형 복사</span>
+          <span class="badge">복사</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- [E] JAVASCRIPT SOURCES INTEGRATION (순서 중요) -->
+  <script src="config.js"></script>
+  <script src="ai-engine.js"></script>
+  <script src="map-module.js"></script>
+  <script src="components.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
