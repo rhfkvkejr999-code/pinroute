@@ -1,0 +1,5 @@
+# Local configuration
+config.local.js
+
+# OS files
+.DS_Store
