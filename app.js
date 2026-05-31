@@ -382,20 +382,28 @@ const App = {
     }
 
     try {
-      const systemInstruction = `너는 여행 계획 통합 플랫폼 "PINROUTE"의 맞춤형 여행 플래너 역할을 수행하는 여행 취향 분석 전문 가이드 AI이다.
-목표: 사용자의 여행 취향(동행인, 예산, 이동수단, 선호 숙소 스타일 등)을 충분히 수집할 때까지 대화를 유도하고 친절하게 대화해야 한다.
+      const systemInstruction = `너는 여행 계획 통합 플랫폼 "PINROUTE"의 친근한 여행 가이드 AI야.
+목표: 사용자가 편안하게 이야기하도록 이끌며, 정중하지만 딱딱하지 않은 대화체로 여행 취향을 깊게 파악하는 것이다.
+응답 스타일:
+- 딱딱한 보고서형 문장은 피하고, 친구에게 이야기하듯 부드럽고 자연스럽게 말해라.
+- 사용자의 감정을 공감하고, 작은 칭찬이나 이해의 표현을 넣어라.
+- 최대한 질문 형태로 마무리해서 대화가 계속되게 만들어라.
 행동 규칙:
 1. 절대 대화가 완료되었다거나 조사가 끝났다는 표현("조사가 끝났습니다", "감사합니다", "완료되었습니다" 등)을 쓰지 마라.
 2. 버튼을 누르라거나 다음 단계로 이동하라는 UI 관련 안내를 하지 마라.
-3. 동일한 질문을 반복하지 말고 매끄러운 꼬리질문으로 이어가라.
-4. 항상 사용자가 자연스럽게 답할 수 있는 구체적인 질문으로 끝마쳐라.
+3. 이전에 이미 물어본 내용을 그대로 반복하지 말고 자연스러운 꼬리질문을 이어가라.
+4. 사용자가 쉽게 답할 수 있도록 구체적인 예시를 섞어 질문하되 부담스럽지 않게 하라.
 현재 사용자의 목적지: ${AppState.onboarding.destination || '미정'}, 관심 취향 태그: ${AppState.onboarding.tags.join(", ") || '없음'}`;
 
-      // Gemini API용 contents 빌드
-      const contents = [];
+      const contents = [
+        {
+          role: 'system',
+          parts: [{ text: systemInstruction }]
+        }
+      ];
       chatHistory.forEach(h => {
         contents.push({
-          role: h.sender === 'user' ? 'user' : 'model',
+          role: h.sender === 'user' ? 'user' : 'assistant',
           parts: [{ text: h.text }]
         });
       });
@@ -414,7 +422,9 @@ const App = {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          contents: contents
+          contents: contents,
+          temperature: 0.7,
+          candidateCount: 1
         })
       });
 
@@ -1481,6 +1491,7 @@ const App = {
     }
 
     const mapSearchInput = document.getElementById("map-search-input");
+    const mapSearchBtn = document.getElementById("map-search-btn");
     if (mapSearchInput) {
       mapSearchInput.addEventListener("input", (e) => {
         AppState.mapFilters.searchKeyword = e.target.value.trim();
@@ -1491,6 +1502,11 @@ const App = {
           e.preventDefault();
           this.performMapSearch();
         }
+      });
+    }
+    if (mapSearchBtn) {
+      mapSearchBtn.addEventListener("click", () => {
+        this.performMapSearch();
       });
     }
 

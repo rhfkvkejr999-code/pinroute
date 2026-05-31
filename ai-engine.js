@@ -88,19 +88,19 @@ const AIEngine = {
     // 사용자가 입력한 메시지의 키워드를 매핑하여 피드백 문구를 부드럽게 조합
     let feedback = "";
     if (userMsgClean.includes("가족") || userMsgClean.includes("부모")) {
-      feedback = "부모님과 함께 가시는 효도 여행이시군요! 휠체어 이용이나 이동 동선의 경사도까지 꼼꼼히 살피겠습니다. ";
+      feedback = "부모님과 함께 가시는 효도 여행이라니, 정말 따뜻한 선택이에요. 이동 편의와 편안함을 더 먼저 챙겨드릴게요. ";
     } else if (userMsgClean.includes("연인") || userMsgClean.includes("커플") || userMsgClean.includes("남자친구") || userMsgClean.includes("여자친구")) {
-      feedback = "사랑하는 연인과의 기념일 여행이라니 정말 설레네요! 사진이 그림처럼 나오는 감성 스팟 위주로 조율하겠습니다. ";
+      feedback = "연인과 함께하는 로맨틱한 여행이라니, 분위기 있는 스팟으로 감성을 가득 채워드릴게요. ";
     } else if (userMsgClean.includes("힐링") || userMsgClean.includes("바다") || userMsgClean.includes("자연")) {
-      feedback = "자연 속에서 여유롭게 바람을 쐬는 평화로운 일정이 제격이겠네요. 숲내음 가득한 코스를 얹어볼게요. ";
+      feedback = "자연 속에서 천천히 쉬는 여행을 원하시는군요. 숲길과 바다를 함께 담아 편안한 하루를 만들어볼게요. ";
     } else if (userMsgClean.includes("맛집") || userMsgClean.includes("카페") || userMsgClean.includes("먹")) {
-      feedback = "현지 미식을 빼놓으면 여행의 반을 잃는 셈이죠! 현지인들만 찾아가는 알짜배기 노포 식당들도 동선에 끼워넣어 드릴게요. ";
+      feedback = "먹는 재미가 중요한 여행이시네요! 현지인 추천 맛집과 감성 카페를 적절히 섞어드릴게요. ";
     } else if (userMsgClean.includes("렌터카") || userMsgClean.includes("차")) {
-      feedback = "자가용/렌터카를 타시는군요! 주차가 편리하고 드라이브 코스가 환상적인 숨은 핫플로 묶어 드려야겠어요. ";
+      feedback = "렌터카 여행이라면 드라이브 코스와 주차 걱정 없는 장소를 중심으로 매칭해드릴게요. ";
     } else if (userMsgClean.includes("뚜벅이") || userMsgClean.includes("대중교통") || userMsgClean.includes("도보")) {
-      feedback = "대중교통을 이용하시는 뚜벅이 여행이시라면 버스 정류장에서 가깝고 걷기 편한 집약적인 동선이 최선이겠네요. ";
+      feedback = "뚜벅이 여행을 계획 중이시면 이동이 편한 동선을 우선으로 해서 부담 없이 즐길 수 있게 챙겨드릴게요. ";
     } else {
-      feedback = "말씀해주신 취향 조각들이 마음 깊이 와닿네요. PINROUTE 맞춤 알고리즘에 소중하게 반영하겠습니다. ";
+      feedback = "말씀해주신 취향 하나하나가 정말 귀하게 느껴져요. 편안한 분위기로 여행을 설계해볼게요. ";
     }
 
     // 다음 질문 선택 (턴 수 기반 순환 질문 및 꼬리 질문 응답)

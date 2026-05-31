@@ -12,6 +12,8 @@ const MapModule = {
   searchMarkers: [],
   polyline: null,
   isMockMode: false,
+  kakaoLoaded: false,
+  kakaoLoading: false,
   currentPlan: null,
   zoomScale: 1.0,
 
@@ -30,12 +32,27 @@ const MapModule = {
     }
 
     // 이미 카카오 객체가 로드되어 있는 경우
-    if (window.kakao && window.kakao.maps) {
+    if (window.kakao && window.kakao.maps && this.kakaoLoaded) {
       if (callback) callback(true);
       return;
     }
 
+    // 로딩 중인 경우, 콜백 소비를 대기
+    if (this.kakaoLoading) {
+      const waitInterval = setInterval(() => {
+        if (this.kakaoLoaded) {
+          clearInterval(waitInterval);
+          if (callback) callback(true);
+        } else if (this.isMockMode) {
+          clearInterval(waitInterval);
+          if (callback) callback(false);
+        }
+      }, 150);
+      return;
+    }
+
     // 동적 스크립트 엘리먼트 생성 및 주입
+    this.kakaoLoading = true;
     const script = document.createElement("script");
     script.type = "text/javascript";
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false`;
@@ -45,6 +62,8 @@ const MapModule = {
       window.kakao.maps.load(() => {
         console.log("PINROUTE [MapModule]: Kakao Map SDK loaded successfully.");
         this.isMockMode = false;
+        this.kakaoLoaded = true;
+        this.kakaoLoading = false;
         if (callback) callback(true);
       });
     };
@@ -387,39 +406,61 @@ const MapModule = {
       if (callback) callback([]);
       return;
     }
-    if (!window.kakao || !window.kakao.maps || this.isMockMode) {
+    if (this.isMockMode) {
       if (callback) callback([]);
       return;
     }
 
-    const ps = new kakao.maps.services.Places();
-    ps.keywordSearch(keyword, (data, status) => {
-      if (status === kakao.maps.services.Status.OK) {
-        const results = data.map(item => ({
-          id: item.id,
-          name: item.place_name,
-          address: item.road_address_name || item.address_name || '',
-          category: item.category_name,
-          lat: parseFloat(item.y),
-          lng: parseFloat(item.x)
-        }));
-
-        if (this.kakaoMapInstance) {
-          results.slice(0, 6).forEach(item => {
-            const marker = new kakao.maps.Marker({
-              map: this.kakaoMapInstance,
-              position: new kakao.maps.LatLng(item.lat, item.lng),
-              title: item.name
-            });
-            this.searchMarkers.push(marker);
-          });
-        }
-
-        if (callback) callback(results);
+    const performSearch = () => {
+      if (!window.kakao || !window.kakao.maps || !this.kakaoLoaded) {
+        if (callback) callback([]);
         return;
       }
+
+      const ps = new kakao.maps.services.Places();
+      ps.keywordSearch(keyword, (data, status) => {
+        if (status === kakao.maps.services.Status.OK) {
+          const results = data.map(item => ({
+            id: item.id,
+            name: item.place_name,
+            address: item.road_address_name || item.address_name || '',
+            category: item.category_name,
+            lat: parseFloat(item.y),
+            lng: parseFloat(item.x)
+          }));
+
+          if (this.kakaoMapInstance) {
+            results.slice(0, 6).forEach(item => {
+              const marker = new kakao.maps.Marker({
+                map: this.kakaoMapInstance,
+                position: new kakao.maps.LatLng(item.lat, item.lng),
+                title: item.name
+              });
+              this.searchMarkers.push(marker);
+            });
+          }
+
+          if (callback) callback(results);
+          return;
+        }
+
+        if (callback) callback([]);
+      });
+    };
+
+    if (window.kakao && window.kakao.maps && this.kakaoLoaded) {
+      performSearch();
+    } else if (window.kakao && window.kakao.maps && !this.kakaoLoaded) {
+      window.kakao.maps.load(() => {
+        this.kakaoLoaded = true;
+        this.kakaoLoading = false;
+        performSearch();
+      });
+    } else if (this.kakaoLoading) {
+      setTimeout(() => this.searchPlaces(keyword, callback), 250);
+    } else {
       if (callback) callback([]);
-    });
+    }
   },
 
   /**
