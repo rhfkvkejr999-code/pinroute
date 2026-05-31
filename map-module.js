@@ -10,12 +10,14 @@ const MapModule = {
   kakaoMapInstance: null,
   markers: [],
   searchMarkers: [],
+  mockSearchMarkerEls: [], // Mock 모드 검색 마커 DOM 요소 목록
   polyline: null,
   isMockMode: false,
   kakaoLoaded: false,
   kakaoLoading: false,
   currentPlan: null,
   zoomScale: 1.0,
+  nearbySearchCenter: null, // { lat, lng } - 주변 검색 기준 좌표
 
   /**
    * 카카오 맵 SDK 비동기 로딩
@@ -115,6 +117,16 @@ const MapModule = {
     const map = new kakao.maps.Map(container, mapOptions);
     this.kakaoMapInstance = map;
     this.clearMarkers();
+
+    // 현재 지도 중심 좌표 저장 (주변 검색 기준점)
+    const centerPos = centerLatLng;
+    this.nearbySearchCenter = { lat: centerPos.getLat(), lng: centerPos.getLng() };
+
+    // 지도 이동 시 중심 좌표 업데이트
+    kakao.maps.event.addListener(map, 'center_changed', () => {
+      const c = map.getCenter();
+      this.nearbySearchCenter = { lat: c.getLat(), lng: c.getLng() };
+    });
 
     const linePath = [];
     const bounds = new kakao.maps.LatLngBounds();
@@ -392,12 +404,132 @@ const MapModule = {
   },
 
   clearSearchMarkers: function() {
+    // 카카오맵 마커 제거
     if (this.searchMarkers) {
       this.searchMarkers.forEach(marker => {
         if (marker.setMap) marker.setMap(null);
       });
     }
     this.searchMarkers = [];
+
+    // Mock 맵 DOM 마커 제거
+    if (this.mockSearchMarkerEls) {
+      this.mockSearchMarkerEls.forEach(el => {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      });
+    }
+    this.mockSearchMarkerEls = [];
+  },
+
+  /**
+   * Mock 지도 위에 검색 결과 핀을 시각적으로 표시
+   */
+  drawMockSearchMarkers: function(results, onMarkerClick) {
+    this.clearSearchMarkers();
+    const markersLayer = document.getElementById('mock-markers-layer');
+    if (!markersLayer || !results.length) return;
+
+    // 현재 일정 핀들의 좌표 범위 가져오기 (지도 스케일 맞춰주기 위해)
+    const spots = (this.currentPlan && this.currentPlan.schedule) || [];
+    let minLat = this.nearbySearchCenter ? this.nearbySearchCenter.lat - 0.005 : 33.4996;
+    let maxLat = this.nearbySearchCenter ? this.nearbySearchCenter.lat + 0.005 : 33.5296;
+    let minLng = this.nearbySearchCenter ? this.nearbySearchCenter.lng - 0.005 : 126.5212;
+    let maxLng = this.nearbySearchCenter ? this.nearbySearchCenter.lng + 0.005 : 126.5612;
+
+    if (spots.length > 0) {
+      minLat = Math.min(minLat, ...spots.map(s => s.lat));
+      maxLat = Math.max(maxLat, ...spots.map(s => s.lat));
+      minLng = Math.min(minLng, ...spots.map(s => s.lng));
+      maxLng = Math.max(maxLng, ...spots.map(s => s.lng));
+    }
+
+    // 결과 핀들을 지도 범위 안에 배치
+    results.forEach((spot, i) => {
+      // lat/lng 좌표가 있으면 실좌표 기반, 없으면 무작위 위치
+      const lat = spot.lat || (minLat + Math.random() * (maxLat - minLat));
+      const lng = spot.lng || (minLng + Math.random() * (maxLng - minLng));
+
+      const latDiff = maxLat - minLat || 0.01;
+      const lngDiff = maxLng - minLng || 0.01;
+
+      const x = 15 + ((lng - minLng) / lngDiff) * 70;
+      const y = 75 - ((lat - minLat) / latDiff) * 60;
+
+      // 카테고리별 색상
+      const colorMap = {
+        food: '#EF4444',
+        spot: '#5DBB63',
+        convenience: '#8B5CF6',
+        hotel: '#F59E0B'
+      };
+      const color = colorMap[spot.type] || colorMap[spot.category?.includes('편의') ? 'convenience' : 'spot'] || '#5DBB63';
+      const emoji = spot.emoji || '📍';
+
+      const markerEl = document.createElement('div');
+      markerEl.className = 'mock-marker mock-search-marker';
+      markerEl.style.cssText = `
+        position: absolute;
+        left: ${Math.max(5, Math.min(95, x))}%;
+        top: ${Math.max(5, Math.min(85, y))}%;
+        transform: translate(-50%, -100%);
+        z-index: 12;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: marker-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        animation-delay: ${i * 0.05}s;
+      `;
+
+      markerEl.innerHTML = `
+        <div style="
+          width: 32px; height: 32px;
+          background: ${color};
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 2px solid white;
+          box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+          display: flex; align-items: center; justify-content: center;
+        ">
+          <span style="transform: rotate(45deg); font-size: 14px;">${emoji}</span>
+        </div>
+        <div style="
+          margin-top: 3px;
+          background: ${color};
+          color: white;
+          font-size: 9px;
+          font-weight: 700;
+          padding: 2px 6px;
+          border-radius: 8px;
+          white-space: nowrap;
+          max-width: 70px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        ">${spot.name}</div>
+      `;
+
+      markerEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (onMarkerClick) onMarkerClick(spot);
+      });
+
+      markersLayer.appendChild(markerEl);
+      this.mockSearchMarkerEls.push(markerEl);
+    });
+
+    // 폐 애니메이션 키프레임 동적 주입
+    if (!document.getElementById('mock-search-marker-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'mock-search-marker-keyframes';
+      style.innerHTML = `
+        @keyframes marker-pop {
+          0% { transform: translate(-50%, -100%) scale(0); opacity: 0; }
+          100% { transform: translate(-50%, -100%) scale(1); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
   },
 
   getKakaoCategoryCode: function(type) {
@@ -497,6 +629,150 @@ const MapModule = {
     } else {
       if (callback) callback([]);
     }
+  },
+
+  /**
+   * 현재 지도 중심 기준 반경 내 카테고리 주변 검색
+   * 카카오 Maps: radius + location 옵션 사용
+   * Mock 모드: 가상 샘플 데이터 반환
+   */
+  searchNearbyByCategory: function(category, callback, options = {}) {
+    const { limit = 20 } = options;
+    this.clearSearchMarkers();
+
+    if (!category || category === 'all') {
+      if (callback) callback([]);
+      return;
+    }
+
+    // Mock 모드 — 가상 주변 장소 데이터 반환
+    if (this.isMockMode) {
+      const center = this.nearbySearchCenter || { lat: 33.5056213, lng: 126.5311884 };
+      const mockNearby = this._generateMockNearbyData(category, center, limit);
+      if (callback) callback(mockNearby);
+      return;
+    }
+
+    const code = this.getKakaoCategoryCode(category);
+    if (!code) {
+      if (callback) callback([]);
+      return;
+    }
+
+    const performSearch = () => {
+      const ensureServices = (cb) => {
+        try {
+          if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
+            cb();
+          } else if (window.kakao && window.kakao.maps && window.kakao.maps.load) {
+            window.kakao.maps.load(() => cb());
+          } else {
+            setTimeout(() => ensureServices(cb), 150);
+          }
+        } catch (e) {
+          setTimeout(() => ensureServices(cb), 150);
+        }
+      };
+
+      ensureServices(() => {
+        const ps = new kakao.maps.services.Places();
+        const center = this.nearbySearchCenter;
+        const searchOptions = center
+          ? {
+              location: new kakao.maps.LatLng(center.lat, center.lng),
+              radius: 2000,  // 반경 2km
+              sort: kakao.maps.services.SortBy.DISTANCE
+            }
+          : { useMapBounds: true };
+
+        ps.categorySearch(code, (data, status) => {
+          if (status === kakao.maps.services.Status.OK) {
+            let results = data.map(item => ({
+              id: item.id,
+              name: item.place_name,
+              address: item.road_address_name || item.address_name || '',
+              category: item.category_name,
+              lat: parseFloat(item.y),
+              lng: parseFloat(item.x),
+              distance: item.distance ? `${Math.round(item.distance)}m` : null
+            }));
+
+            results = results.slice(0, limit);
+
+            if (this.kakaoMapInstance) {
+              results.forEach(item => {
+                const marker = new kakao.maps.Marker({
+                  map: this.kakaoMapInstance,
+                  position: new kakao.maps.LatLng(item.lat, item.lng),
+                  title: item.name
+                });
+                this.searchMarkers.push(marker);
+              });
+            }
+
+            if (callback) callback(results);
+            return;
+          }
+          if (callback) callback([]);
+        }, searchOptions);
+      });
+    };
+
+    if (window.kakao && window.kakao.maps && this.kakaoLoaded) {
+      performSearch();
+    } else if (this.kakaoLoading) {
+      setTimeout(() => this.searchNearbyByCategory(category, callback, options), 250);
+    } else {
+      if (callback) callback([]);
+    }
+  },
+
+  /**
+   * Mock 모드용 가상 주변 장소 데이터 생성기
+   */
+  _generateMockNearbyData: function(category, center, limit = 10) {
+    const categoryMocks = {
+      food: [
+        { name: '현지 맛집 한식당', address: '인근 골목 2번지', category: '음식점 > 한식', emoji: '🍚' },
+        { name: '해안가 해물 뚝배기', address: '바닷가 1길 15', category: '음식점 > 해산물', emoji: '🦞' },
+        { name: '로컬 감성 카페', address: '돌담로 7', category: '음식점 > 카페', emoji: '☕' },
+        { name: '고기굽는 집', address: '중앙로 33', category: '음식점 > 고기', emoji: '🥩' },
+        { name: '해장국 전문점', address: '아침시장 2가', category: '음식점 > 해장국', emoji: '🍲' },
+        { name: '디저트 공방', address: '카페거리 12', category: '음식점 > 디저트', emoji: '🍰' },
+      ],
+      spot: [
+        { name: '전망대 공원', address: '언덕 정상 1', category: '관광명소 > 자연', emoji: '🌅' },
+        { name: '역사 문화 박물관', address: '문화로 55', category: '관광명소 > 역사', emoji: '🏛️' },
+        { name: '오름 트레킹 코스', address: '등산로 입구', category: '관광명소 > 자연', emoji: '⛰️' },
+        { name: '해변 산책로', address: '해안길 1km', category: '관광명소 > 해안', emoji: '🌊' },
+        { name: '야시장 명소', address: '야시장 거리', category: '관광명소 > 문화', emoji: '🏮' },
+      ],
+      convenience: [
+        { name: 'CU 편의점', address: '중앙로 10', category: '편의점', emoji: '🛒' },
+        { name: 'GS25', address: '해안로 22', category: '편의점', emoji: '🛒' },
+        { name: '세븐일레븐', address: '상가 1층', category: '편의점', emoji: '🛒' },
+        { name: 'CU 24시간', address: '관광지 입구', category: '편의점', emoji: '🛒' },
+      ],
+      hotel: [
+        { name: '오션뷰 펜션', address: '해변로 8', category: '숙박 > 펜션', emoji: '🏖️' },
+        { name: '감성 게스트하우스', address: '골목길 3', category: '숙박 > 게스트하우스', emoji: '🏡' },
+        { name: '비즈니스 호텔', address: '중심가 50', category: '숙박 > 호텔', emoji: '🏨' },
+        { name: '에어비앤비 독채', address: '조용한 마을', category: '숙박 > 독채', emoji: '🏠' },
+      ]
+    };
+
+    const baseData = categoryMocks[category] || [];
+    return baseData.slice(0, limit).map((item, i) => ({
+      id: `mock_nearby_${category}_${i}`,
+      name: item.name,
+      title: item.name,
+      address: item.address,
+      category: item.category,
+      lat: center.lat + (Math.random() - 0.5) * 0.01,
+      lng: center.lng + (Math.random() - 0.5) * 0.01,
+      distance: `${Math.round(100 + Math.random() * 1900)}m`,
+      emoji: item.emoji
+    }));
   },
 
   searchPlacesByCategory: function(category, callback, options = {}) {

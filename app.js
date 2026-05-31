@@ -31,6 +31,7 @@ const AppState = {
   },
   mapSearchResults: [],
   activeTab: 'home',
+  isFreeMapMode: false, // 자유 선택 모드 여부
   
   // 마이페이지 환경설정
   settings: {
@@ -416,14 +417,14 @@ const App = {
         }
       }
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
           contents: contents,
-          candidateGenerationConfig: {
+          generationConfig: {
             temperature: 0.7,
             candidateCount: 1
           }
@@ -724,6 +725,16 @@ const App = {
     const keyword = (AppState.mapFilters.searchKeyword || '').trim();
     const category = AppState.mapFilters.activeCategory || 'all';
 
+    // 카테고리 선택 + 키워드 없음 → 주변 검색 실행 (자유 모드 여부 무관)
+    if (category !== 'all' && !keyword) {
+      this._showNearbySearchLoading(category);
+      MapModule.searchNearbyByCategory(category, (results) => {
+        AppState.mapSearchResults = results;
+        this.renderSearchResults();
+      }, { limit: 20 });
+      return;
+    }
+
     if (!keyword && category === 'all') {
       AppState.mapSearchResults = [];
       MapModule.clearSearchMarkers();
@@ -738,7 +749,7 @@ const App = {
           this.renderSearchResults();
         });
       } else {
-        MapModule.searchPlacesByCategory(category, (results) => {
+        MapModule.searchNearbyByCategory(category, (results) => {
           AppState.mapSearchResults = this.limitResults(results, 20, true);
           this.renderSearchResults();
         });
@@ -746,6 +757,12 @@ const App = {
     } else {
       if (keyword) {
         AppState.mapSearchResults = this.limitResults(this.buildFallbackSearchResults(keyword, category), 20, false);
+      } else if (category !== 'all') {
+        // Mock 모드 카테고리 검색 → 가상 주변 데이터
+        AppState.mapSearchResults = this.limitResults(
+          MapModule._generateMockNearbyData(category, MapModule.nearbySearchCenter || { lat: 33.5056213, lng: 126.5311884 }, 20),
+          20, false
+        );
       } else {
         AppState.mapSearchResults = this.limitResults(this.getFilteredMapSpots().map(spot => ({
           id: spot.id,
@@ -761,6 +778,32 @@ const App = {
     }
   },
 
+  /**
+   * 바텀 시트를 자동으로 펼치는 헬퍼
+   */
+  _expandBottomSheet: function() {
+    const sheet = document.querySelector('.bottom-sheet');
+    if (sheet && !sheet.classList.contains('expanded')) {
+      sheet.classList.add('expanded');
+    }
+  },
+
+  /**
+   * 주변 검색 실행 중 로딩 UI 표시
+   */
+  _showNearbySearchLoading: function(category) {
+    this._expandBottomSheet(); // 바텀 시트 자동 펼치기
+    const list = document.getElementById('map-search-results-list');
+    const header = document.getElementById('map-search-results-header');
+    const label = this.mapTypeLabel(category);
+    if (header) header.innerText = `📍 ${label} 주변 검색 중...`;
+    if (list) list.innerHTML = `
+      <div style="padding: 20px; text-align: center; color: var(--primary); font-size: 13px; font-weight: 600; animation: pulse 1.2s infinite;">
+        🔍 ${label} 주변 장소를 불러오는 중...
+      </div>
+    `;
+  },
+
   updateMapSearch: function() {
     this.refreshMapAndTimeline();
     this.performMapSearch();
@@ -772,14 +815,16 @@ const App = {
     if (!list || !header) return;
 
     const keyword = (AppState.mapFilters.searchKeyword || '').trim();
-    const isFiltered = keyword || AppState.mapFilters.activeCategory !== 'all';
+    const category = AppState.mapFilters.activeCategory;
+    const isFiltered = keyword || category !== 'all';
+    const isNearbyMode = category !== 'all' && !keyword;
     let results = [];
 
     if (AppState.mapSearchResults.length) {
       results = AppState.mapSearchResults;
     } else if (keyword) {
-      results = this.buildFallbackSearchResults(keyword, AppState.mapFilters.activeCategory);
-    } else if (AppState.mapFilters.activeCategory !== 'all') {
+      results = this.buildFallbackSearchResults(keyword, category);
+    } else if (category !== 'all') {
       results = this.getFilteredMapSpots().map(spot => ({
         id: spot.id,
         title: spot.name,
@@ -793,7 +838,7 @@ const App = {
 
     if (!keyword && !isFiltered) {
       header.innerText = '검색 결과';
-      list.innerHTML = '<div class="empty-state" style="padding: 16px; border-radius: 16px; background: rgba(247,247,247,0.95); font-size:13px;">검색어를 입력하거나 카테고리를 선택해 보세요.</div>';
+      list.innerHTML = '<div class="empty-state" style="padding: 16px; border-radius: 16px; background: rgba(247,247,247,0.95); font-size:13px;">📍 카테고리를 선택하면 현위치 주변 장소를 검색합니다.</div>';
       return;
     }
 
@@ -803,18 +848,33 @@ const App = {
       return;
     }
 
-    header.innerText = `검색 결과 ${results.length}건`;
+    // 결과가 있으면 바텀 시트 자동 펼치기
+    this._expandBottomSheet();
+
+    const categoryLabel = this.mapTypeLabel(category);
+    if (isNearbyMode) {
+      header.innerHTML = `<span style="color:var(--primary);">📍 현위치 주변</span> ${categoryLabel} ${results.length}곳`;
+    } else {
+      header.innerText = `검색 결과 ${results.length}건`;
+    }
     list.innerHTML = '';
 
     results.slice(0, 20).forEach(result => {
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = 'search-result-card';
+      card.className = 'search-result-card' + (isNearbyMode ? ' nearby-result-card' : '');
+      const distanceBadge = result.distance
+        ? `<span class="result-distance-badge">${result.distance}</span>`
+        : '';
+      const emoji = result.emoji ? `${result.emoji} ` : '';
       card.innerHTML = `
-        <div class="result-title">${result.title}</div>
+        <div class="result-title">${emoji}${result.title || result.name}</div>
         <div class="result-meta">
           <span>${result.address || '위치 정보 없음'}</span>
-          <span class="result-label">${result.category || '검색 결과'}</span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            ${distanceBadge}
+            <span class="result-label">${result.category || '검색 결과'}</span>
+          </div>
         </div>
       `;
 
@@ -824,7 +884,7 @@ const App = {
         } else if (result.lat && result.lng) {
           this.openSpotDetailModal(this.buildTemporarySpotFromSearchResult(result));
         } else {
-          Components.showToast(`${result.title}을(를) 지도로 표시합니다.`);
+          Components.showToast(`${result.title || result.name}을(를) 지도로 표시합니다.`);
         }
       });
 
@@ -835,7 +895,13 @@ const App = {
     AppState.currentPlan = { title: '나만의 자유 지도 일정', schedule: [] };
     AppState.mapFilters = { activeCategory: 'all', searchKeyword: '' };
     AppState.mapSearchResults = [];
-    Components.showToast('자유 선택 모드가 활성화되었습니다. 지도에서 원하는 장소를 클릭해 추가하세요.');
+    AppState.isFreeMapMode = true;
+
+    // 카테고리 칩 전체 비활성 효과
+    document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+    document.querySelector('.category-chip[data-type="all"]')?.classList.add('active');
+
+    Components.showToast('📍 자유 선택 모드! 카테고리를 선택하면 주변 장소를 검색합니다.');
     this.refreshMapAndTimeline();
   },
 
@@ -1556,8 +1622,16 @@ const App = {
       chip.addEventListener("click", () => {
         mapCategoryChips.forEach(c => c.classList.remove("active"));
         chip.classList.add("active");
-        AppState.mapFilters.activeCategory = chip.getAttribute("data-type") || 'all';
-        this.updateMapSearch();
+        const newCategory = chip.getAttribute("data-type") || 'all';
+        AppState.mapFilters.activeCategory = newCategory;
+
+        if (AppState.isFreeMapMode && newCategory !== 'all') {
+          // 자유 모드에서 카테고리 선택 → 주변 검색
+          Components.showToast(`📍 현위치 주변 '${this.mapTypeLabel(newCategory)}' 검색 중...`);
+          this.performMapSearch();
+        } else {
+          this.updateMapSearch();
+        }
       });
     });
 
@@ -1642,3 +1716,6 @@ const App = {
 document.addEventListener("DOMContentLoaded", () => {
   App.init();
 });
+
+
+window.App = App;

@@ -2247,3 +2247,49 @@ input:checked + .slider:before {
   border-color: rgba(51, 65, 85, 0.8);
   color: white;
 }
+
+/* --- Nearby Search Result Cards --- */
+.nearby-result-card {
+  border-left: 3px solid var(--primary) !important;
+  background: linear-gradient(135deg, rgba(93, 187, 99, 0.04) 0%, white 100%) !important;
+}
+
+.nearby-result-card:hover,
+.nearby-result-card:active {
+  background: linear-gradient(135deg, rgba(93, 187, 99, 0.1) 0%, var(--bg-gray) 100%) !important;
+}
+
+.result-distance-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary);
+  background-color: var(--primary-soft);
+  padding: 2px 6px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* Pulse animation for loading state */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Free mode active indicator on category chips */
+.category-chip.active {
+  position: relative;
+}
+
+/* Search results header nearby indicator */
+#map-search-results-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dark-gray);
+  padding: 4px 0 8px;
+}
+
+.dark-mode .nearby-result-card {
+  background: linear-gradient(135deg, rgba(93, 187, 99, 0.08) 0%, #1E293B 100%) !important;
+}
