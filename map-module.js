@@ -400,7 +400,18 @@ const MapModule = {
     this.searchMarkers = [];
   },
 
-  searchPlaces: function(keyword, callback) {
+  getKakaoCategoryCode: function(type) {
+    const categoryMap = {
+      food: 'FD6',
+      spot: 'AT4',
+      convenience: 'CE7',
+      hotel: 'AD5'
+    };
+    return categoryMap[type] || null;
+  },
+
+  searchPlaces: function(keyword, callback, options = {}) {
+    const { limit = 20, randomize = false } = options;
     this.clearSearchMarkers();
     if (!keyword || keyword.trim().length === 0) {
       if (callback) callback([]);
@@ -420,7 +431,7 @@ const MapModule = {
       const ps = new kakao.maps.services.Places();
       ps.keywordSearch(keyword, (data, status) => {
         if (status === kakao.maps.services.Status.OK) {
-          const results = data.map(item => ({
+          let results = data.map(item => ({
             id: item.id,
             name: item.place_name,
             address: item.road_address_name || item.address_name || '',
@@ -429,8 +440,17 @@ const MapModule = {
             lng: parseFloat(item.x)
           }));
 
+          if (randomize && results.length > limit) {
+            for (let i = results.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [results[i], results[j]] = [results[j], results[i]];
+            }
+          }
+
+          results = results.slice(0, limit);
+
           if (this.kakaoMapInstance) {
-            results.slice(0, 6).forEach(item => {
+            results.forEach(item => {
               const marker = new kakao.maps.Marker({
                 map: this.kakaoMapInstance,
                 position: new kakao.maps.LatLng(item.lat, item.lng),
@@ -457,7 +477,87 @@ const MapModule = {
         performSearch();
       });
     } else if (this.kakaoLoading) {
-      setTimeout(() => this.searchPlaces(keyword, callback), 250);
+      setTimeout(() => this.searchPlaces(keyword, callback, options), 250);
+    } else {
+      if (callback) callback([]);
+    }
+  },
+
+  searchPlacesByCategory: function(category, callback, options = {}) {
+    const { limit = 20, randomize = true } = options;
+    this.clearSearchMarkers();
+    if (!category || category === 'all') {
+      if (callback) callback([]);
+      return;
+    }
+    if (this.isMockMode) {
+      if (callback) callback([]);
+      return;
+    }
+
+    const code = this.getKakaoCategoryCode(category);
+    if (!code) {
+      if (callback) callback([]);
+      return;
+    }
+
+    const performCategorySearch = () => {
+      if (!window.kakao || !window.kakao.maps || !this.kakaoLoaded) {
+        if (callback) callback([]);
+        return;
+      }
+
+      const ps = new kakao.maps.services.Places();
+      const searchOptions = { useMapBounds: true };
+      ps.categorySearch(code, (data, status) => {
+        if (status === kakao.maps.services.Status.OK) {
+          let results = data.map(item => ({
+            id: item.id,
+            name: item.place_name,
+            address: item.road_address_name || item.address_name || '',
+            category: item.category_name,
+            lat: parseFloat(item.y),
+            lng: parseFloat(item.x)
+          }));
+
+          if (randomize && results.length > limit) {
+            for (let i = results.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [results[i], results[j]] = [results[j], results[i]];
+            }
+          }
+
+          results = results.slice(0, limit);
+
+          if (this.kakaoMapInstance) {
+            results.forEach(item => {
+              const marker = new kakao.maps.Marker({
+                map: this.kakaoMapInstance,
+                position: new kakao.maps.LatLng(item.lat, item.lng),
+                title: item.name
+              });
+              this.searchMarkers.push(marker);
+            });
+          }
+
+          if (callback) callback(results);
+          return;
+        }
+
+        if (callback) callback([]);
+      }, searchOptions);
+    };
+
+    if (window.kakao && window.kakao.maps && this.kakaoLoaded) {
+      performCategorySearch();
+    } else if (window.kakao && window.kakao.maps && !this.kakaoLoaded) {
+      window.kakao.maps.load(() => {
+        this.kakaoLoaded = true;
+        this.kakaoLoading = false;
+        performCategorySearch();
+      });
+    } else if (this.kakaoLoading) {
+      setTimeout(() => this.searchPlacesByCategory(category, callback, options), 250);
     } else {
       if (callback) callback([]);
     }

@@ -596,8 +596,11 @@ const App = {
       this.selectedRecommendPlan = plans[0];
     }
 
-    if (!AppState.currentPlan) {
-      AppState.currentPlan = this.selectedRecommendPlan ? JSON.parse(JSON.stringify(this.selectedRecommendPlan)) : { title: '나만의 자유 지도 일정', schedule: [] };
+    if (this.selectedRecommendPlan && (!AppState.currentPlan || !AppState.currentPlan.schedule || AppState.currentPlan.schedule.length === 0 || AppState.currentPlan.title !== this.selectedRecommendPlan.title)) {
+      // 선택된 추천 플랜이 있고 현재 계획이 비어 있거나 다른 플랜이면 추천 플랜을 로드
+      AppState.currentPlan = JSON.parse(JSON.stringify(this.selectedRecommendPlan));
+    } else if (!AppState.currentPlan) {
+      AppState.currentPlan = { title: '나만의 자유 지도 일정', schedule: [] };
     }
 
     AppState.mapFilters = { activeCategory: 'all', searchKeyword: '' };
@@ -610,10 +613,9 @@ const App = {
     const plan = AppState.currentPlan;
     if (!plan) return;
 
-    const filteredSpots = this.getFilteredMapSpots();
     const planToRender = {
       ...plan,
-      schedule: filteredSpots.length ? filteredSpots : plan.schedule
+      schedule: plan.schedule || []
     };
 
     // 1. 지도 핀 초기화 & 로딩
@@ -652,6 +654,19 @@ const App = {
     if (type === 'convenience') return '편의점';
     if (type === 'hotel') return '숙소';
     return type || '';
+  },
+
+  limitResults: function(results, limit = 20, randomize = false) {
+    if (!Array.isArray(results) || results.length === 0) return [];
+    let sliced = results;
+    if (randomize && results.length > limit) {
+      sliced = results.slice();
+      for (let i = sliced.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [sliced[i], sliced[j]] = [sliced[j], sliced[i]];
+      }
+    }
+    return sliced.slice(0, limit);
   },
 
   buildFallbackSearchResults: function(keyword, category = 'all') {
@@ -703,19 +718,41 @@ const App = {
 
   performMapSearch: function() {
     const keyword = (AppState.mapFilters.searchKeyword || '').trim();
-    if (!keyword) {
+    const category = AppState.mapFilters.activeCategory || 'all';
+
+    if (!keyword && category === 'all') {
       AppState.mapSearchResults = [];
+      MapModule.clearSearchMarkers();
       this.renderSearchResults();
       return;
     }
 
     if (!MapModule.isMockMode && window.kakao && window.kakao.maps) {
-      MapModule.searchPlaces(keyword, (results) => {
-        AppState.mapSearchResults = results;
-        this.renderSearchResults();
-      });
+      if (keyword) {
+        MapModule.searchPlaces(keyword, (results) => {
+          AppState.mapSearchResults = this.limitResults(results, 20, false);
+          this.renderSearchResults();
+        });
+      } else {
+        MapModule.searchPlacesByCategory(category, (results) => {
+          AppState.mapSearchResults = this.limitResults(results, 20, true);
+          this.renderSearchResults();
+        });
+      }
     } else {
-      AppState.mapSearchResults = this.buildFallbackSearchResults(keyword, AppState.mapFilters.activeCategory);
+      if (keyword) {
+        AppState.mapSearchResults = this.limitResults(this.buildFallbackSearchResults(keyword, category), 20, false);
+      } else {
+        AppState.mapSearchResults = this.limitResults(this.getFilteredMapSpots().map(spot => ({
+          id: spot.id,
+          title: spot.name,
+          address: spot.desc || '',
+          category: this.mapTypeLabel(spot.type),
+          lat: spot.lat,
+          lng: spot.lng,
+          internalSpot: spot
+        })), 20, true);
+      }
       this.renderSearchResults();
     }
   },
@@ -765,7 +802,7 @@ const App = {
     header.innerText = `검색 결과 ${results.length}건`;
     list.innerHTML = '';
 
-    results.slice(0, 6).forEach(result => {
+    results.slice(0, 20).forEach(result => {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'search-result-card';
