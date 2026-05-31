@@ -275,6 +275,21 @@
               <button class="map-control-btn" onclick="Components.showToast('핀 고정 모드가 켜졌습니다. 지도 위 장소를 눌러 추가하세요!')">📌 핀 고정</button>
             </div>
 
+            <!-- 지도 검색 및 카테고리 필터 -->
+            <div class="map-search-panel">
+              <div class="map-search-box">
+                <input type="text" class="search-bar" id="map-search-input" placeholder="맛집, 핫플, 편의점 등 장소 검색">
+                <span class="search-icon">🔍</span>
+              </div>
+              <div class="map-category-filters" id="map-category-filters">
+                <span class="category-chip active" data-type="all">전체</span>
+                <span class="category-chip" data-type="food">맛집</span>
+                <span class="category-chip" data-type="spot">핫플</span>
+                <span class="category-chip" data-type="convenience">편의점</span>
+                <span class="category-chip" data-type="hotel">숙소</span>
+              </div>
+            </div>
+
             <!-- 지도의 우측 플로팅 줌 컨트롤러 -->
             <div class="map-zoom-controls">
               <button class="zoom-btn" id="map-zoom-in" title="확대">＋</button>
@@ -293,6 +308,13 @@
                     <span class="sheet-subtitle" id="sheet-spots-count">총 장소 5곳</span>
                   </div>
                   <span style="font-size:11px; font-weight:700; color:var(--primary); cursor:pointer;" onclick="Components.showToast('순서는 ▲▼로 변경, X로 제외가 가능합니다.')">도움말</span>
+                </div>
+
+                <div class="search-results" id="map-search-results">
+                  <div class="search-results-header" id="map-search-results-header">검색 결과</div>
+                  <div class="search-results-list" id="map-search-results-list">
+                    <!-- JS 동적 렌더링 -->
+                  </div>
                 </div>
                 
                 <!-- 타임라인 아이템 리스트업 -->

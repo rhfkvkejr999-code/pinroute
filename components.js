@@ -117,6 +117,12 @@ const Components = {
     } else if (spot.type === 'hotel') {
       nodeClass = "hotel";
       icon = "🏨";
+    } else if (spot.type === 'spot') {
+      nodeClass = "spot";
+      icon = "🔥";
+    } else if (spot.type === 'convenience') {
+      nodeClass = "convenience";
+      icon = "🛒";
     }
 
     item.innerHTML = `
@@ -124,7 +130,7 @@ const Components = {
       <div class="timeline-info">
         <div>
           <div class="timeline-name">${spot.name.split(" ").slice(-1)[0]}</div>
-          <div class="timeline-type">${spot.time} • ${spot.type === 'food' ? '식당/카페' : spot.type === 'hotel' ? '숙소' : '관광지'}</div>
+          <div class="timeline-type">${spot.time} • ${spot.type === 'food' ? '식당/카페' : spot.type === 'hotel' ? '숙소' : spot.type === 'convenience' ? '편의점' : '핫플'}</div>
         </div>
         <div class="timeline-edit-controls">
           ${index > 0 ? `<button class="timeline-action-btn btn-up" title="순서 위로">▲</button>` : ''}

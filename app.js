@@ -25,6 +25,11 @@ const AppState = {
   },
   savedPlans: [], // 사용자가 직접 저장한 계획 목록 (로컬스토리지 저장)
   currentPlan: null, // 지도 상에 로드된 계획 객체
+  mapFilters: {
+    activeCategory: 'all',
+    searchKeyword: ''
+  },
+  mapSearchResults: [],
   activeTab: 'home',
   
   // 마이페이지 환경설정
@@ -583,6 +588,8 @@ const App = {
     
     // 현재 액티브 맵 플랜 할당
     AppState.currentPlan = JSON.parse(JSON.stringify(this.selectedRecommendPlan)); // 딥카피하여 자유로운 편집 보장
+    AppState.mapFilters = { activeCategory: 'all', searchKeyword: '' };
+    AppState.mapSearchResults = [];
     
     this.refreshMapAndTimeline();
   },
@@ -591,8 +598,14 @@ const App = {
     const plan = AppState.currentPlan;
     if (!plan) return;
 
+    const filteredSpots = this.getFilteredMapSpots();
+    const planToRender = {
+      ...plan,
+      schedule: filteredSpots.length ? filteredSpots : plan.schedule
+    };
+
     // 1. 지도 핀 초기화 & 로딩
-    MapModule.initMap("map-container-layer", plan, 
+    MapModule.initMap("map-container-layer", planToRender, 
       (clickedSpot) => {
         this.openSpotDetailModal(clickedSpot);
       },
@@ -603,11 +616,141 @@ const App = {
 
     // 2. 바텀 시트 일정 리스트 렌더링
     this.renderTimelineList();
+    this.renderSearchResults();
   },
 
-  /**
-   * 내가 지도 상에서 직접 빈 곳을 클릭했을 때 작동하는 장소 핀 꽂기 팝업 모달
-   */
+  getFilteredMapSpots: function() {
+    const plan = AppState.currentPlan;
+    if (!plan || !plan.schedule) return [];
+
+    const keyword = (AppState.mapFilters.searchKeyword || "").trim().toLowerCase();
+    return plan.schedule.filter(spot => {
+      const matchesCategory = AppState.mapFilters.activeCategory === 'all' || spot.type === AppState.mapFilters.activeCategory;
+      const matchesKeyword = !keyword ||
+        spot.name.toLowerCase().includes(keyword) ||
+        (spot.desc || '').toLowerCase().includes(keyword) ||
+        this.mapTypeLabel(spot.type).includes(keyword);
+      return matchesCategory && matchesKeyword;
+    });
+  },
+
+  mapTypeLabel: function(type) {
+    if (type === 'food') return '맛집';
+    if (type === 'spot') return '핫플';
+    if (type === 'convenience') return '편의점';
+    if (type === 'hotel') return '숙소';
+    return type || '';
+  },
+
+  buildFallbackSearchResults: function(keyword, category = 'all') {
+    if (!keyword) return [];
+    const lowered = keyword.toLowerCase();
+    return (AppState.currentPlan?.schedule || [])
+      .filter(spot => {
+        const matchText = spot.name.toLowerCase().includes(lowered) ||
+          (spot.desc || '').toLowerCase().includes(lowered) ||
+          this.mapTypeLabel(spot.type).toLowerCase().includes(lowered);
+        const matchCategory = category === 'all' || spot.type === category;
+        return matchText && matchCategory;
+      })
+      .map(spot => ({
+        id: spot.id,
+        title: spot.name,
+        address: spot.desc || '',
+        category: this.mapTypeLabel(spot.type),
+        lat: spot.lat,
+        lng: spot.lng,
+        internalSpot: spot
+      }));
+  },
+
+  performMapSearch: function() {
+    const keyword = (AppState.mapFilters.searchKeyword || '').trim();
+    if (!keyword) {
+      AppState.mapSearchResults = [];
+      this.renderSearchResults();
+      return;
+    }
+
+    if (!MapModule.isMockMode && window.kakao && window.kakao.maps) {
+      MapModule.searchPlaces(keyword, (results) => {
+        AppState.mapSearchResults = results;
+        this.renderSearchResults();
+      });
+    } else {
+      AppState.mapSearchResults = this.buildFallbackSearchResults(keyword, AppState.mapFilters.activeCategory);
+      this.renderSearchResults();
+    }
+  },
+
+  updateMapSearch: function() {
+    this.refreshMapAndTimeline();
+    this.performMapSearch();
+  },
+
+  renderSearchResults: function() {
+    const list = document.getElementById('map-search-results-list');
+    const header = document.getElementById('map-search-results-header');
+    if (!list || !header) return;
+
+    const keyword = (AppState.mapFilters.searchKeyword || '').trim();
+    const isFiltered = keyword || AppState.mapFilters.activeCategory !== 'all';
+    let results = [];
+
+    if (AppState.mapSearchResults.length) {
+      results = AppState.mapSearchResults;
+    } else if (keyword) {
+      results = this.buildFallbackSearchResults(keyword, AppState.mapFilters.activeCategory);
+    } else if (AppState.mapFilters.activeCategory !== 'all') {
+      results = this.getFilteredMapSpots().map(spot => ({
+        id: spot.id,
+        title: spot.name,
+        address: spot.desc || '',
+        category: this.mapTypeLabel(spot.type),
+        lat: spot.lat,
+        lng: spot.lng,
+        internalSpot: spot
+      }));
+    }
+
+    if (!keyword && !isFiltered) {
+      header.innerText = '검색 결과';
+      list.innerHTML = '<div class="empty-state" style="padding: 16px; border-radius: 16px; background: rgba(247,247,247,0.95); font-size:13px;">검색어를 입력하거나 카테고리를 선택해 보세요.</div>';
+      return;
+    }
+
+    if (results.length === 0) {
+      header.innerText = `검색 결과 0건`;
+      list.innerHTML = '<div class="empty-state" style="padding: 16px; border-radius: 16px; background: rgba(247,247,247,0.95); font-size:13px;">검색어와 일치하는 장소가 없습니다.</div>';
+      return;
+    }
+
+    header.innerText = `검색 결과 ${results.length}건`;
+    list.innerHTML = '';
+
+    results.slice(0, 6).forEach(result => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'search-result-card';
+      card.innerHTML = `
+        <div class="result-title">${result.title}</div>
+        <div class="result-meta">
+          <span>${result.address || '위치 정보 없음'}</span>
+          <span class="result-label">${result.category || '검색 결과'}</span>
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        if (result.internalSpot) {
+          this.openSpotDetailModal(result.internalSpot);
+        } else {
+          Components.showToast(`${result.title}을(를) 지도로 표시합니다.`);
+        }
+      });
+
+      list.appendChild(card);
+    });
+  },
   openCustomPinRegisterModal: function(lat, lng) {
     const container = document.body;
     const overlay = document.createElement("div");
@@ -649,6 +792,7 @@ const App = {
             <select id="custom-spot-type" style="width: 100%; height: 44px; border: 1.5px solid var(--light-gray); border-radius: 12px; padding: 0 12px; font-size:13px; outline:none; background-color: white; color: var(--dark);">
               <option value="spot">🏞️ 일반 관광지</option>
               <option value="food">🍣 맛집 / 카페</option>
+              <option value="convenience">🛒 편의점</option>
               <option value="hotel">🏨 숙소 / 숙박</option>
             </select>
           </div>
@@ -705,32 +849,34 @@ const App = {
   renderTimelineList: function() {
     const plan = AppState.currentPlan;
     const container = document.getElementById("timeline-list-container");
-    if (!container) return;
+    if (!container || !plan) return;
 
     container.innerHTML = "";
-    const spots = plan.schedule;
+    const filteredSpots = this.getFilteredMapSpots();
+    const isFiltering = AppState.mapFilters.searchKeyword || AppState.mapFilters.activeCategory !== 'all';
+    const spots = filteredSpots.length ? filteredSpots : (isFiltering ? [] : plan.schedule);
 
-    // 요약 정보 갱신
     document.getElementById("sheet-spots-count").innerText = `총 장소 ${spots.length}곳`;
+
+    if (spots.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="padding: 24px; border-radius: 20px; background: rgba(247,247,247,0.95); margin: 10px 0; text-align:center; font-size:13px;">필터에 맞는 일정이 없습니다. 검색어를 바꾸거나 카테고리를 전체로 되돌려주세요.</div>';
+      return;
+    }
 
     spots.forEach((spot, idx) => {
       const item = Components.createTimelineItem(
         spot,
         idx,
         spots.length,
-        // UP 버튼 핸들러
         (upIdx) => {
           this.swapTimelineSpots(upIdx, upIdx - 1);
         },
-        // DOWN 버튼 핸들러
         (downIdx) => {
           this.swapTimelineSpots(downIdx, downIdx + 1);
         },
-        // DELETE 버튼 핸들러
         (delIdx) => {
           this.deleteTimelineSpot(delIdx);
         },
-        // 정보 클릭 -> 상세 팝업
         (clickedSpot) => {
           this.openSpotDetailModal(clickedSpot);
         }
@@ -791,6 +937,8 @@ const App = {
     let thumEmoji = "📍";
     if (spot.type === 'food') thumEmoji = "🍣";
     else if (spot.type === 'hotel') thumEmoji = "🏨";
+    else if (spot.type === 'spot') thumEmoji = "🔥";
+    else if (spot.type === 'convenience') thumEmoji = "🛒";
     else if (spot.type === 'start') thumEmoji = "🚩";
 
     document.getElementById("modal-thum-emoji").innerText = thumEmoji;
@@ -1287,6 +1435,30 @@ const App = {
         MapModule.zoomOut();
       });
     }
+
+    const mapSearchInput = document.getElementById("map-search-input");
+    if (mapSearchInput) {
+      mapSearchInput.addEventListener("input", (e) => {
+        AppState.mapFilters.searchKeyword = e.target.value.trim();
+        this.updateMapSearch();
+      });
+      mapSearchInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          this.performMapSearch();
+        }
+      });
+    }
+
+    const mapCategoryChips = document.querySelectorAll(".category-chip");
+    mapCategoryChips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        mapCategoryChips.forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        AppState.mapFilters.activeCategory = chip.getAttribute("data-type") || 'all';
+        this.updateMapSearch();
+      });
+    });
 
     // 상세 모달 닫기
     const detailOverlay = document.getElementById("spot-detail-overlay");

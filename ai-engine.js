@@ -148,6 +148,7 @@ const AIEngine = {
         { name: "비밀의 숲 오크 오솔길", latOffset: 0.015, lngOffset: 0.022, desc: "초록빛 피톤치드가 가득 뿜어져 나오는 숲길에서 즐기는 아침 산책", type: "spot", external: "길찾기", rating: "4.8", time: "09:00 - 11:30" },
         { name: "풀내음 가득 돌담 식당", latOffset: 0.008, lngOffset: -0.012, desc: "신선한 유기농 로컬 채소와 수제 소스로 빚어낸 웰빙 밥상", type: "food", external: "식당 예약", rating: "4.7", time: "12:00 - 13:30" },
         { name: "바람이 쉬어가는 다원 카페", latOffset: -0.012, lngOffset: 0.018, desc: "푸르른 녹차 밭을 한눈에 조망하며 직접 내린 고급 우전 홍차 한 잔의 힐링", type: "food", external: "길찾기", rating: "4.9", time: "14:00 - 15:30" },
+        { name: "365편의점 로컬 스테이션", latOffset: 0.006, lngOffset: 0.014, desc: "여행 중 급한 간식과 필수품을 빠르게 챙길 수 있는 편의점 핫플", type: "convenience", external: "길찾기", rating: "4.4", time: "16:00 - 16:15" },
         { name: "노을빛 억새 오름 언덕", latOffset: -0.022, lngOffset: -0.008, desc: "바람에 흔들리는 억새풀 사이로 지는 오렌지빛 일몰을 눈에 담는 스팟", type: "spot", external: "길찾기", rating: "4.6", time: "16:30 - 18:00" },
         { name: "스테이 잔잔 감성 독채", latOffset: -0.005, lngOffset: 0.005, desc: "새소리와 바람소리만 들리는 고요한 자연 속 프리미엄 자쿠지 한옥 펜션", type: "hotel", external: "숙소 예약", rating: "4.95", time: "19:00 ~ 체크인" }
       ],
@@ -155,6 +156,7 @@ const AIEngine = {
         { name: "오래된 성곽 문화 역사관", latOffset: -0.018, lngOffset: 0.011, desc: "역사 해설가의 친절한 스토리텔링과 함께 즐기는 고궁/성곽 성지 순례", type: "spot", external: "입장권 구매", rating: "4.6", time: "09:30 - 11:30" },
         { name: "줄 서서 먹는 향토 전통가", latOffset: 0.022, lngOffset: -0.022, desc: "수십 년 전통의 레시피로 우려내어 국물맛이 깊고 진한 명품 요리", type: "food", external: "식당 예약", rating: "4.8", time: "12:00 - 13:00" },
         { name: "액티브 짚라인 & 카트 테마파크", latOffset: 0.005, lngOffset: 0.028, desc: "창공을 가르며 달리는 짜릿한 속도감의 레이싱 카트와 와이어 액티비티", type: "spot", external: "입장권 구매", rating: "4.7", time: "13:30 - 16:00" },
+        { name: "트렌디 로컬 편의점 키오스크", latOffset: 0.01, lngOffset: -0.013, desc: "즉석 도시락과 여행 소품을 챙기기 좋은 편의점 스테이션", type: "convenience", external: "길찾기", rating: "4.5", time: "16:00 - 16:20" },
         { name: "바다 위를 달리는 해안 열차", latOffset: -0.025, lngOffset: -0.015, desc: "탁 트인 망망대해를 창문 밖으로 감상하며 해안선을 따라 달리는 열차 투어", type: "spot", external: "입장권 구매", rating: "4.5", time: "16:30 - 18:00" },
         { name: "그랜드 오션 뷰 호텔", latOffset: 0.012, lngOffset: 0.012, desc: "인피니티 풀에서 해질녘 수영을 즐길 수 있는 특급 프리미엄 리조트", type: "hotel", external: "숙소 예약", rating: "4.88", time: "18:30 ~ 체크인" }
       ],
@@ -162,6 +164,7 @@ const AIEngine = {
         { name: "백년 가게 수제 떡 명인관", latOffset: 0.005, lngOffset: -0.005, desc: "매일 아침 명인이 정성을 다해 빚어 쫄깃함이 남다른 정통 디저트 가게", type: "food", external: "길찾기", rating: "4.5", time: "09:30 - 10:30" },
         { name: "SNS 핫플 오픈런 수제버거", latOffset: 0.018, lngOffset: 0.018, desc: "육즙이 뚝뚝 떨어지는 패티와 수제 번, 특제 소스가 빚어낸 줄 서서 먹는 로컬 버거집", type: "food", external: "식당 예약", rating: "4.75", time: "11:30 - 13:00" },
         { name: "스페셜티 로스터리 핸드드립숍", latOffset: -0.015, lngOffset: -0.022, desc: "바리스타 챔피언이 직접 내린 독특한 산미의 에티오피아 게이샤 커피와 무화과 파이", type: "food", external: "길찾기", rating: "4.9", time: "13:30 - 15:00" },
+        { name: "24시간 트렌디 편의점", latOffset: -0.012, lngOffset: 0.012, desc: "달콤한 간식과 여행 필수품을 한 번에 챙길 수 있는 편의점 명소", type: "convenience", external: "길찾기", rating: "4.5", time: "15:30 - 15:45" },
         { name: "수산시장 직영 랍스터 & 제철 모듬회", latOffset: -0.028, lngOffset: 0.008, desc: "살이 꽉 찬 특대 랍스터 버터구이와 갓 썰어내어 식감이 활기찬 자연산 모듬회 한 상", type: "food", external: "식당 예약", rating: "4.85", time: "17:30 - 19:30" },
         { name: "도심 속 감성 야경 어반 부티크", latOffset: 0.01, lngOffset: -0.015, desc: "탑층 루프탑 바에서 낭만적인 칵테일을 홀짝일 수 있는 가성비 극상의 부티크 디자인 호텔", type: "hotel", external: "숙소 예약", rating: "4.65", time: "20:00 ~ 체크인" }
       ]

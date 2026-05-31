@@ -9,6 +9,7 @@
 const MapModule = {
   kakaoMapInstance: null,
   markers: [],
+  searchMarkers: [],
   polyline: null,
   isMockMode: false,
   currentPlan: null,
@@ -366,6 +367,56 @@ const MapModule = {
       this.polyline.setMap(null);
       this.polyline = null;
     }
+  },
+
+  clearSearchMarkers: function() {
+    if (this.searchMarkers) {
+      this.searchMarkers.forEach(marker => {
+        if (marker.setMap) marker.setMap(null);
+      });
+    }
+    this.searchMarkers = [];
+  },
+
+  searchPlaces: function(keyword, callback) {
+    this.clearSearchMarkers();
+    if (!keyword || keyword.trim().length === 0) {
+      if (callback) callback([]);
+      return;
+    }
+    if (!window.kakao || !window.kakao.maps || this.isMockMode) {
+      if (callback) callback([]);
+      return;
+    }
+
+    const ps = new kakao.maps.services.Places();
+    ps.keywordSearch(keyword, (data, status) => {
+      if (status === kakao.maps.services.Status.OK) {
+        const results = data.map(item => ({
+          id: item.id,
+          name: item.place_name,
+          address: item.road_address_name || item.address_name || '',
+          category: item.category_name,
+          lat: parseFloat(item.y),
+          lng: parseFloat(item.x)
+        }));
+
+        if (this.kakaoMapInstance) {
+          results.slice(0, 6).forEach(item => {
+            const marker = new kakao.maps.Marker({
+              map: this.kakaoMapInstance,
+              position: new kakao.maps.LatLng(item.lat, item.lng),
+              title: item.name
+            });
+            this.searchMarkers.push(marker);
+          });
+        }
+
+        if (callback) callback(results);
+        return;
+      }
+      if (callback) callback([]);
+    });
   },
 
   /**
