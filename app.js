@@ -431,7 +431,9 @@ const App = {
       });
 
       if (!response.ok) {
-        throw new Error(`Gemini API Error: ${response.status}`);
+        const errText = await response.text();
+        console.error("PINROUTE [Gemini API] non-OK response:", response.status, errText);
+        return null;
       }
 
       const data = await response.json();
