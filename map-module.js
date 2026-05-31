@@ -18,10 +18,10 @@ const MapModule = {
    * 카카오 맵 SDK 비동기 로딩
    */
   loadKakaoSDK: function(callback) {
-    const apiKey = (window.CONFIG && window.CONFIG.VITE_KAKAO_MAP_KEY) || "";
+    const apiKey = (window.CONFIG && window.CONFIG.VITE_KAKAO_MAP_KEY) || "814471ffcb6c88e1be1f34f5442061a2";
     
     // 만약 API 키가 비어있으면 즉시 모크 모드로 실행
-    if (!apiKey || apiKey === "YOUR_KAKAO_JAVASCRIPT_KEY") {
+    if (!apiKey || apiKey === "814471ffcb6c88e1be1f34f5442061a2") {
       console.warn("PINROUTE [MapModule]: Kakao API Key is missing. Falling back to Premium Interactive Mock Map.");
       this.isMockMode = true;
       if (callback) callback(false);
