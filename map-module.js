@@ -112,6 +112,7 @@ const MapModule = {
       if (index === 0) markerColor = "#3B82F6"; // 출발지 Blue
       else if (spot.type === 'food') markerColor = "#EF4444"; // 맛집 Red
       else if (spot.type === 'hotel') markerColor = "#F59E0B"; // 숙소 Yellow
+      else if (spot.type === 'convenience') markerColor = "#8B5CF6"; // 편의점 Purple
 
       // 카카오 맵 커스텀 마커 HTML 오버레이 구성
       const content = `
@@ -333,6 +334,7 @@ const MapModule = {
       if (index === 0) markerColor = "#3B82F6"; // 출발지 Blue
       else if (spot.type === 'food') markerColor = "#EF4444"; // 맛집 Red
       else if (spot.type === 'hotel') markerColor = "#F59E0B"; // 숙소 Yellow
+      else if (spot.type === 'convenience') markerColor = "#8B5CF6"; // 편의점 Purple
 
       const markerEl = document.createElement("div");
       markerEl.className = `mock-marker marker-${index === 0 ? 'start' : spot.type}`;

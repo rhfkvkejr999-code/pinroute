@@ -2156,6 +2156,7 @@ input:checked + .slider:before {
 .marker-start .marker-pin { background-color: var(--info); }
 .marker-spot .marker-pin { background-color: var(--primary); }
 .marker-food .marker-pin { background-color: var(--danger); }
+.marker-convenience .marker-pin { background-color: #8B5CF6; }
 .marker-hotel .marker-pin { background-color: var(--warning); }
 
 
