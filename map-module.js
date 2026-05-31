@@ -428,8 +428,23 @@ const MapModule = {
         return;
       }
 
-      const ps = new kakao.maps.services.Places();
-      ps.keywordSearch(keyword, (data, status) => {
+      const ensureServices = (cb) => {
+        try {
+          if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
+            cb();
+          } else if (window.kakao && window.kakao.maps && window.kakao.maps.load) {
+            window.kakao.maps.load(() => cb());
+          } else {
+            setTimeout(() => ensureServices(cb), 150);
+          }
+        } catch (e) {
+          setTimeout(() => ensureServices(cb), 150);
+        }
+      };
+
+      ensureServices(() => {
+        const ps = new kakao.maps.services.Places();
+        ps.keywordSearch(keyword, (data, status) => {
         if (status === kakao.maps.services.Status.OK) {
           let results = data.map(item => ({
             id: item.id,
@@ -465,6 +480,7 @@ const MapModule = {
         }
 
         if (callback) callback([]);
+      });
       });
     };
 
@@ -507,9 +523,24 @@ const MapModule = {
         return;
       }
 
-      const ps = new kakao.maps.services.Places();
-      const searchOptions = { useMapBounds: true };
-      ps.categorySearch(code, (data, status) => {
+      const ensureServices = (cb) => {
+        try {
+          if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
+            cb();
+          } else if (window.kakao && window.kakao.maps && window.kakao.maps.load) {
+            window.kakao.maps.load(() => cb());
+          } else {
+            setTimeout(() => ensureServices(cb), 150);
+          }
+        } catch (e) {
+          setTimeout(() => ensureServices(cb), 150);
+        }
+      };
+
+      ensureServices(() => {
+        const ps = new kakao.maps.services.Places();
+        const searchOptions = { useMapBounds: true };
+        ps.categorySearch(code, (data, status) => {
         if (status === kakao.maps.services.Status.OK) {
           let results = data.map(item => ({
             id: item.id,
@@ -546,6 +577,7 @@ const MapModule = {
 
         if (callback) callback([]);
       }, searchOptions);
+      });
     };
 
     if (window.kakao && window.kakao.maps && this.kakaoLoaded) {
