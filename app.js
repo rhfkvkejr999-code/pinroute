@@ -423,8 +423,10 @@ const App = {
         },
         body: JSON.stringify({
           contents: contents,
-          temperature: 0.7,
-          candidateCount: 1
+          candidateGenerationConfig: {
+            temperature: 0.7,
+            candidateCount: 1
+          }
         })
       });
 
