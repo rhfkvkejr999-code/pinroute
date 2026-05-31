@@ -579,15 +579,17 @@ const App = {
    * 5. 지도 및 일정 리스트 & 실시간 핀 동기화 편집
    */
   initMapScreen: function() {
-    if (!this.selectedRecommendPlan) {
+    if (!this.selectedRecommendPlan && !AppState.currentPlan) {
       // 만약 계획을 고르지 않고 지도로 바로 왔다면 기본 생성된 3대 계획 중 1안 로딩
       const dest = AppState.onboarding.destination || "제주";
       const plans = AIEngine.generateThreePlans(dest, AppState.onboarding.tags, AppState.chatSession.history);
       this.selectedRecommendPlan = plans[0];
     }
-    
-    // 현재 액티브 맵 플랜 할당
-    AppState.currentPlan = JSON.parse(JSON.stringify(this.selectedRecommendPlan)); // 딥카피하여 자유로운 편집 보장
+
+    if (!AppState.currentPlan) {
+      AppState.currentPlan = this.selectedRecommendPlan ? JSON.parse(JSON.stringify(this.selectedRecommendPlan)) : { title: '나만의 자유 지도 일정', schedule: [] };
+    }
+
     AppState.mapFilters = { activeCategory: 'all', searchKeyword: '' };
     AppState.mapSearchResults = [];
     
@@ -662,6 +664,31 @@ const App = {
         lng: spot.lng,
         internalSpot: spot
       }));
+  },
+
+  buildTemporarySpotFromSearchResult: function(result) {
+    const mappedType = this.getTypeFromCategoryString(result.category || '');
+    return {
+      id: `search_${Date.now()}`,
+      name: result.name,
+      lat: result.lat,
+      lng: result.lng,
+      desc: result.address || '지도에서 검색한 장소입니다.',
+      type: mappedType,
+      external: '길찾기',
+      rating: '4.5',
+      time: '원하는 시간대에 추가하세요',
+      duration: '1.5시간',
+      reviews: [{ user: '지도 검색', text: '검색 결과로 추가한 장소입니다.', stars: '★★★★' }],
+      reason: '지도에서 선택한 장소를 통해 자유롭게 나만의 동선을 만들 수 있습니다.'
+    };
+  },
+
+  getTypeFromCategoryString: function(category) {
+    if (category.includes('맛집') || category.includes('카페') || category.includes('식당')) return 'food';
+    if (category.includes('편의점') || category.includes('마트')) return 'convenience';
+    if (category.includes('숙박') || category.includes('호텔') || category.includes('게스트하우스')) return 'hotel';
+    return 'spot';
   },
 
   performMapSearch: function() {
@@ -743,6 +770,8 @@ const App = {
       card.addEventListener('click', () => {
         if (result.internalSpot) {
           this.openSpotDetailModal(result.internalSpot);
+        } else if (result.lat && result.lng) {
+          this.openSpotDetailModal(this.buildTemporarySpotFromSearchResult(result));
         } else {
           Components.showToast(`${result.title}을(를) 지도로 표시합니다.`);
         }
@@ -751,6 +780,14 @@ const App = {
       list.appendChild(card);
     });
   },
+  startFreeMapMode: function() {
+    AppState.currentPlan = { title: '나만의 자유 지도 일정', schedule: [] };
+    AppState.mapFilters = { activeCategory: 'all', searchKeyword: '' };
+    AppState.mapSearchResults = [];
+    Components.showToast('자유 선택 모드가 활성화되었습니다. 지도에서 원하는 장소를 클릭해 추가하세요.');
+    this.refreshMapAndTimeline();
+  },
+
   openCustomPinRegisterModal: function(lat, lng) {
     const container = document.body;
     const overlay = document.createElement("div");
@@ -1420,6 +1457,13 @@ const App = {
     }
     if (mapExportBtn) {
       mapExportBtn.addEventListener("click", () => this.openExportModal());
+    }
+
+    const mapFreeModeBtn = document.getElementById("map-free-mode-btn");
+    if (mapFreeModeBtn) {
+      mapFreeModeBtn.addEventListener("click", () => {
+        this.startFreeMapMode();
+      });
     }
 
     // 지도 우측 줌인 / 줌아웃 제어

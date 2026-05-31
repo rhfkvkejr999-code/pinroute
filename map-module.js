@@ -84,14 +84,13 @@ const MapModule = {
    * 실제 카카오 맵 렌더링 및 핀 배치
    */
   renderKakaoMap: function(container, plan, onMarkerClick, onMapClick) {
-    const spots = plan.schedule;
-    if (spots.length === 0) return;
+    const spots = plan.schedule || [];
 
-    // 첫 번째 장소를 중심으로 지도 생성
-    const centerLatLng = new kakao.maps.LatLng(spots[0].lat, spots[0].lng);
+    const defaultCenter = new kakao.maps.LatLng(33.5056213, 126.5311884);
+    const centerLatLng = spots.length ? new kakao.maps.LatLng(spots[0].lat, spots[0].lng) : defaultCenter;
     const mapOptions = {
       center: centerLatLng,
-      level: 5
+      level: spots.length ? 5 : 7
     };
 
     const map = new kakao.maps.Map(container, mapOptions);
