@@ -6,7 +6,7 @@
  */
 const CONFIG = {
   VITE_KAKAO_MAP_KEY: "814471ffcb6c88e1be1f34f5442061a2",
-  VITE_GEMINI_API_KEY: "YOUR_GEMINI_API_KEY"
+  VITE_GEMINI_API_KEY: "AQ.Ab8RN6JbvF1sx_RX1eXl8DvV6PQIjspGcWnHtyh-2N1IP7ohDw"
 };
 
 if (typeof module !== 'undefined' && module.exports) {
