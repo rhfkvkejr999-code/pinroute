@@ -141,20 +141,22 @@ const MapModule = {
       }, 100);
     });
 
-    // 핀들을 이을 굵은 초록색 폴리라인 그리기 (PINROUTE 요구사항: 초록색 라인)
-    const polyline = new kakao.maps.Polyline({
-      path: linePath,
-      strokeWeight: 5,
-      strokeColor: '#5DBB63',
-      strokeOpacity: 0.9,
-      strokeStyle: 'solid'
-    });
+    if (spots.length > 0) {
+      // 핀들을 이을 굵은 초록색 폴리라인 그리기 (PINROUTE 요구사항: 초록색 라인)
+      const polyline = new kakao.maps.Polyline({
+        path: linePath,
+        strokeWeight: 5,
+        strokeColor: '#5DBB63',
+        strokeOpacity: 0.9,
+        strokeStyle: 'solid'
+      });
 
-    polyline.setMap(map);
-    this.polyline = polyline;
+      polyline.setMap(map);
+      this.polyline = polyline;
 
-    // 모든 마커가 화면에 잘 들어오도록 지도의 바운드 재조정
-    map.setBounds(bounds);
+      // 모든 마커가 화면에 잘 들어오도록 지도의 바운드 재조정
+      map.setBounds(bounds);
+    }
 
     // 지도 클릭 시 나만의 핀 꽂기 콜백 연동
     if (onMapClick) {
